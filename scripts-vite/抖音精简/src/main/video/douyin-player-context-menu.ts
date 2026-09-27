@@ -24,7 +24,11 @@ const BLOCK_LABEL = "屏蔽 TA";
 /** 抖音红，用于让「屏蔽 TA」在原生菜单里更醒目 */
 const DOUYIN_RED = "#fe2c55";
 
-/** 原生菜单里的固定文案，用于反推菜单容器，并按菜单形态给出最少项数 */
+/**
+ * 原生菜单里的固定文案，用于反推菜单容器，并按菜单形态给出最少项数
+ *
+ * `anchorTexts` 是**可替代的候选文案**，命中任意一个即可（抖音不同场景的菜单项不一样）
+ */
 const MENU_SHAPES: { anchorTexts: string[]; minItemCount: number }[] = [
   // 普通视频 / 已进入直播间：菜单项较多，带「进入作者主页」「进入直播间」
   { anchorTexts: ["进入作者主页", "进入直播间"], minItemCount: 3 },
@@ -34,6 +38,30 @@ const MENU_SHAPES: { anchorTexts: string[]; minItemCount: number }[] = [
 
 /** 视频播放器容器，作品的 `awemeInfo` 就挂在它的 React 数据上 */
 const BASE_PLAYER_SELECTOR = ".basePlayerContainer";
+
+/**
+ * 判断候选容器是不是下拉菜单（各菜单项纵向堆叠）
+ *
+ * 弹幕的右键菜单是一排横向的小按钮，里面同样有「举报」，只按文案判定会把它
+ * 误当成播放器菜单。下拉菜单的各项在纵向上排开、横向上基本重合，据此区分：
+ * 比较各项中心的纵向跨度与横向跨度，纵向更大才是下拉菜单。
+ */
+function isVerticalMenu($menu: HTMLElement) {
+  const centerList = Array.from($menu.children)
+    .filter(($row) => $row.getClientRects().length !== 0)
+    .map(($row) => {
+      const rect = $row.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    });
+  if (centerList.length < 2) {
+    return false;
+  }
+  const yList = centerList.map((item) => item.y);
+  const xList = centerList.map((item) => item.x);
+  const ySpread = Math.max(...yList) - Math.min(...yList);
+  const xSpread = Math.max(...xList) - Math.min(...xList);
+  return ySpread > xSpread;
+}
 
 /** 其余播放区域容器（直播卡 / 详情页），取不到上面那个时退化使用 */
 const PLAYER_SELECTOR = [
@@ -186,6 +214,11 @@ export const DouYinPlayerContextMenu = {
       }
       // 菜单由若干并列项组成，且当前必须可见
       if ($menu.children.length < shape.minItemCount || $menu.getClientRects().length === 0) {
+        continue;
+      }
+      // 弹幕的右键菜单（横排的小工具条）里也有「举报」，只按文案判定会误判成
+      // 播放器菜单，注入的「屏蔽 TA」就会指向视频作者，这里按排布方向排除掉
+      if (!isVerticalMenu($menu)) {
         continue;
       }
       return { $menu, $row, anchorText: text };
