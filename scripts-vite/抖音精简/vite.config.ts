@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { defineConfig } from "vite";
 import monkey from "vite-plugin-monkey";
 import { USERSCRIPT_ICON } from "./vite.icon.mts";
@@ -28,14 +29,44 @@ const REPO_RAW_BASE = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NA
 const DEV_VERSION = "9999.99.99";
 
 /**
- * 构建时使用的版本号：`yyyy.MM.dd`
+ * 读取上一次已提交（≈已推送）的构建产物中的版本号
+ *
+ * 以 git HEAD 中的产物为基准：同一份改动重复构建会得到相同版本号（幂等），
+ * 只有在提交之后的下一次构建才会递增，契合「每次推送 +1」
+ */
+function getLastCommittedVersion(): string | null {
+  try {
+    const content = execFileSync("git", ["show", `HEAD:${DIST_DIR_IN_REPO}/${SCRIPT_NAME}.user.js`], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return content.match(/@version\s+(\S+)/)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** 数字补零为两位 */
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+/**
+ * 构建时使用的版本号：`yyyy.MM.dd.xx`
+ *
+ * `xx` 为当日递增序号：同一天在上一次已提交版本基础上 `+1`，跨天重置为 `01`
  */
 function getBuildVersion() {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}.${month}.${day}`;
+  const date = `${now.getFullYear()}.${pad2(now.getMonth() + 1)}.${pad2(now.getDate())}`;
+
+  const parts = getLastCommittedVersion()?.split(".") ?? [];
+  // 兼容旧格式 `yyyy.MM.dd`（3 段，无序号）
+  const sameDay = parts.slice(0, 3).join(".") === date;
+  const lastSeq = parts.length >= 4 ? Number.parseInt(parts[3], 10) : 0;
+  const seq = sameDay && Number.isFinite(lastSeq) ? lastSeq + 1 : 1;
+
+  return `${date}.${pad2(seq)}`;
 }
 
 export default defineConfig(({ command }) => {
@@ -57,7 +88,7 @@ export default defineConfig(({ command }) => {
           icon: USERSCRIPT_ICON,
           match: ["*://*.douyin.com/*"],
           exclude: ["*://creator.douyin.com/*"],
-          license: "MIT",
+          license: "GPL-3.0-only",
           "run-at": "document-start",
           // 供从仓库 raw 链接安装的用户脚本自动检测更新，指向仅含元数据的 `.meta.js`
           updateURL: `${REPO_RAW_BASE}/${SCRIPT_NAME}.meta.js`,

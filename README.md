@@ -4,6 +4,16 @@
 * 本项目通过仿照WhiteSevs大佬的「抖音优化」脚本，由AI操刀重写所得，样式与配色仿抖音风格，精简了很多我不需要的功能，强化了直播聊天过滤的功能，修复了一些问题。
 * 原脚本链接：[Github](https://github.com/WhiteSevs/TamperMonkeyScript/tree/master/scripts-vite/%E6%8A%96%E9%9F%B3%E4%BC%98%E5%8C%96)、[Greasyfork](https://greasyfork.org/zh-CN/scripts/494643-%E6%8A%96%E9%9F%B3%E4%BC%98%E5%8C%96)
 
+## 安装与更新
+
+先安装用户脚本管理器（Tampermonkey、Violentmonkey、ScriptCat 等），再从下列任一来源安装本脚本：
+
+| 来源 | 安装地址 | 说明 |
+| --- | --- | --- |
+| GitHub（Raw） | [抖音精简.user.js](https://raw.githubusercontent.com/iamshaoning/douyin-lite-script/main/scripts-vite/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80/dist/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80.user.js) | 最新构建，随仓库提交更新，适合跟进开发进度 |
+| ScriptCat | [script-show-page/8146](https://scriptcat.org/zh-CN/script-show-page/8146) | 脚本猫商店，支持自动更新与版本历史 |
+| GreasyFork | [scripts/597527](https://greasyfork.org/zh-CN/scripts/597527-%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80) | 油叉商店，支持自动更新与版本历史 |
+
 ## 设置面板位置
 
 - **位置一**：点击浏览器工具栏的油猴图标 → 菜单命令「抖音精简-设置」。
@@ -39,3 +49,9 @@
 ### 屏蔽该词
 
 - **屏蔽该词**：在聊天室中划选一段文字，选区上方会弹出「屏蔽该词」按钮，点击后按字面量加入屏蔽规则。
+
+## 许可证
+
+本项目以 **GPL-3.0-only** 发布，全文见 [LICENSE](./LICENSE)。
+
+本项目为上游「抖音优化」项目（[WhiteSevs/TamperMonkeyScript](https://github.com/WhiteSevs/TamperMonkeyScript)）的衍生作品，上游同样采用 GPL-3.0，故本项目沿用同一许可证。
