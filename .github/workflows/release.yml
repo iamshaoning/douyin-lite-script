@@ -1,0 +1,108 @@
+name: Release
+
+# 每次 push 到 main 都运行：
+# - 读取已提交产物中的 @version 作为标签
+# - 从 CHANGELOG.md 提取对应章节作为更新内容
+# - 标签已存在则跳过（幂等，重复推送不会重复发版）
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      DIST_DIR: scripts-vite/抖音精简/dist
+      SCRIPT_NAME: 抖音精简
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 读取产物版本号
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION="$(grep -m1 -oP '@version\s+\K\S+' "$DIST_DIR/$SCRIPT_NAME.user.js" | tr -d '\r')"
+          if [ -z "$VERSION" ]; then
+            echo "未能从 $DIST_DIR/$SCRIPT_NAME.user.js 读取到 @version" >&2
+            exit 1
+          fi
+          echo "读取到版本号：$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: 检查 Release 是否已存在
+        id: check
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION 已存在，跳过"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 从 CHANGELOG.md 提取更新内容
+        if: steps.check.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          # 统一去掉 CR，避免 Windows 换行影响标题精确匹配
+          tr -d '\r' < CHANGELOG.md > changelog.clean.md
+
+          # 提取某个二级标题章节的正文：标题需为 "## " + 传入的精确字符串
+          extract_section() {
+            awk -v pat="$1" '
+              /^## / {
+                if (found) exit
+                if (substr($0, 4) == pat) { found = 1 }
+                next
+              }
+              found { print }
+            ' changelog.clean.md
+          }
+
+          DATE="${VERSION%.*}"
+
+          NOTES="$(extract_section "$VERSION")"
+          if [ -z "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
+            echo "CHANGELOG 中无 '## $VERSION' 章节，回退到日期章节 '## $DATE'"
+            NOTES="$(extract_section "$DATE")"
+          fi
+          if [ -z "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
+            echo "CHANGELOG 中无日期章节，回退到首个章节"
+            NOTES="$(awk '/^## /{if(found)exit; found=1; next} found{print}' changelog.clean.md)"
+          fi
+          if [ -z "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
+            echo "CHANGELOG.md 中没有可用的更新内容"
+            NOTES="见仓库提交记录。"
+          fi
+
+          printf '%s\n' "$NOTES" > release-notes.md
+          echo "----- release-notes.md -----"
+          cat release-notes.md
+
+      - name: 创建 Release 并上传脚本文件
+        if: steps.check.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --target "${{ github.sha }}" \
+            --notes-file release-notes.md \
+            "$DIST_DIR/$SCRIPT_NAME.user.js" \
+            "$DIST_DIR/$SCRIPT_NAME.meta.js"

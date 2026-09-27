@@ -4,7 +4,7 @@
   "private": true,
   "description": "抖音页面精简与直播聊天室消息过滤脚本的本地开发仓库",
   "keywords": [],
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
     "format": "pnpm recursive run format",
