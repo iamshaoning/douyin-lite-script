@@ -49,9 +49,3 @@
 ### 屏蔽该词
 
 - **屏蔽该词**：在聊天室中划选一段文字，选区上方会弹出「屏蔽该词」按钮，点击后按字面量加入屏蔽规则。
-
-## 许可证
-
-本项目以 **GPL-3.0-only** 发布，全文见 [LICENSE](./LICENSE)。
-
-本项目为上游「抖音优化」项目（[WhiteSevs/TamperMonkeyScript](https://github.com/WhiteSevs/TamperMonkeyScript)）的衍生作品，上游同样采用 GPL-3.0，故本项目沿用同一许可证。
