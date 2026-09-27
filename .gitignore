@@ -1,0 +1,8 @@
+.vscode
+.idea
+node_modules
+dist
+package-lock.json
+vite.config.ts.timestamp*
+*.local
+/**/*.meta.local.user.js

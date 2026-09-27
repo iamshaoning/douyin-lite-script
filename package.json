@@ -1,0 +1,28 @@
+{
+  "name": "douyin-lite-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "抖音页面精简与直播聊天室消息过滤脚本的本地开发仓库",
+  "keywords": [],
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "format": "pnpm recursive run format",
+    "format:dist": "pnpm recursive run format:dist",
+    "build": "pnpm recursive run build",
+    "build:min": "pnpm recursive run build:min",
+    "update": "pnpm update --latest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "oxfmt": "^0.67.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0",
+    "vite-plugin-monkey": "^8.1.1"
+  },
+  "engines": {
+    "node": ">=22.13.0",
+    "npm": ">=10.9.2",
+    "pnpm": ">=10.17.1"
+  }
+}

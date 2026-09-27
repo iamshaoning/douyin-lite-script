@@ -1,0 +1,6 @@
+packages:
+  - 'scripts-vite/**'
+
+# 允许 esbuild 执行安装期构建脚本
+allowBuilds:
+  esbuild: true

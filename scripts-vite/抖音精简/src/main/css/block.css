@@ -1,0 +1,25 @@
+/* 从顶部往下弹出的下载抖音电脑版的drawer提示 */
+#douyin-web-download-guide-container
+/* 视频信息区域的 及时接收作品更新提醒 下载电脑客户端 */
+/* 下载客户端，使用壁纸 */
+div:has(+#wallpaper-modal),
+/* 下载客户端，实时接收消息通知 */
+/* 下载客户端，实时接收好友消息 */
+div:has(> a[download*="douyin-downloade"]):has(+.popShadowAnimation),
+div:has(> a[download*="douyin-downloade"]):has(+div>[data-e2e="listDlgTest-container"]),
+/* 客户端登录访问更便捷 */
+div:has(> a[download*="douyin-downloade"]):has(+.userMenuPanelShadowAnimation),
+/* 前往电脑客户端，即享下载视频 */
+[data-e2e="video-share-container"] div:has(>div>div> a[download*="douyin-downloader"]):first-child,
+/* so.douyin.com的广告item */
+.card-item:has(.h5-ad-video-card),
+.card-item:has([data-is-ad="true"]),
+/* 左侧导航栏的下面的下载抖音精选 */
+[data-e2e="douyin-navigation"] div:has(>div:first-child>img[src*="douyin-pc-web"]),
+/* 左上角顶部的 抖音精选 */
+#douyin-navigation > a[href*="/jingxuan"]:empty,
+/* 直播页面 左侧导航栏的下面的下载抖音精选 */
+[data-e2e="douyin-navigation"] div:has(>div:only-child>img[src*="/webcast/douyin_live/media/"]),
+[data-e2e="douyin-navigation"] div:only-child:has(>img[src*="/webcast/douyin_live/media/"]) {
+  display: none !important;
+}

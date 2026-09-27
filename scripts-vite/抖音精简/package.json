@@ -1,0 +1,17 @@
+{
+  "name": "douyin-lite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "抖音页面精简与直播聊天室消息过滤（零运行时依赖实现）",
+  "type": "module",
+  "scripts": {
+    "check": "pnpm run format && tsc --noEmit",
+    "dev": "tsc --noEmit && vite --force",
+    "format": "oxfmt . --write --config ./../../.oxfmtrc.jsonc",
+    "format:dist": "oxfmt \"dist/抖音精简.user.js\" \"dist/抖音精简.meta.js\" --write --config ./../../.oxfmtrc.jsonc",
+    "build": "pnpm run format && tsc --noEmit && vite build && pnpm run format:dist",
+    "build:min": "pnpm run format && tsc --noEmit && vite build --minify && pnpm run format:dist",
+    "build:watch": "pnpm run format && tsc --noEmit && vite build --watch",
+    "preview": "vite preview --host 0.0.0.0"
+  }
+}
