@@ -100,9 +100,10 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
+          # GitHub 会剔除附件名中的非 ASCII 字符，先复制为 ASCII 文件名再上传
+          cp "$DIST_DIR/$SCRIPT_NAME.user.js" douyin-lite.user.js
           gh release create "$VERSION" \
             --title "$VERSION" \
             --target "${{ github.sha }}" \
             --notes-file release-notes.md \
-            "$DIST_DIR/$SCRIPT_NAME.user.js" \
-            "$DIST_DIR/$SCRIPT_NAME.meta.js"
+            douyin-lite.user.js
