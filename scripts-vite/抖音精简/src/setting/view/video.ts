@@ -1,7 +1,8 @@
 /**
  * 设置面板-视频
  *
- * 包含清晰度选择、暂停弹窗监听、文案复制、评论时间跳转、点赞等数量显示
+ * 包含清晰度选择、暂停弹窗监听、文案复制、评论时间跳转、点赞等数量显示，
+ * 以及播放器右侧工具栏的布局屏蔽
  */
 import { UISelect } from "@/setting/ui-select";
 import { UISwitch } from "@/setting/ui-switch";
@@ -42,6 +43,29 @@ export const PanelVideoConfig: PanelContentConfig = {
         UISwitch("解除视频文案复制限制", "dy-video-allowSelectTitleText"),
         UISwitch("评论区时间可跳转", "dy-video-commentTimeJump"),
         UISwitch("显示点赞、评论、收藏、分享的具体数量", "dy-video-showLikeCommentCollectShareCount"),
+      ],
+    },
+    {
+      text: "",
+      type: "container",
+      views: [
+        {
+          text: "布局屏蔽-播放器右侧工具栏",
+          type: "deepMenu",
+          views: [
+            {
+              type: "container",
+              text: "",
+              views: [
+                UISwitch("【屏蔽】切换播放↑↓", "dy-video-shieldPlaySwitchButton"),
+                UISwitch("【屏蔽】AI抖音", "dy-video-blockAIDouYin"),
+                UISwitch("【屏蔽】听抖音", "dy-video-shieldListenDouYinButton"),
+                UISwitch("【屏蔽】看相关", "dy-video-shieldRelatedRecommendationsButton"),
+                UISwitch("【屏蔽】“…”按钮", "dy-video-shieldMoreButton"),
+              ],
+            },
+          ],
+        },
       ],
     },
   ],
