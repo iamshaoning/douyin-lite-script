@@ -10,6 +10,12 @@ import { log } from "@/core/log";
 import { utils } from "@/core/utils";
 import { Panel } from "@/setting/panel";
 
+/** React Fiber 节点（只用到向上查找 `originalList` 的几个字段） */
+interface ReactFiberNode {
+  memoizedProps?: any;
+  return?: ReactFiberNode | null;
+}
+
 /** 用户发言类消息（只有这类消息带 user 身份信息，才做黑名单|粉丝团|消费等级过滤） */
 const USER_CHAT_METHODS = [
   "WebcastChatMessage",
@@ -266,31 +272,27 @@ export const DouYinLiveMessageFilter = {
   /**
    * 获取聊天室条目元素上挂载的消息实例
    *
-   * 抖音把消息实例放在 React 组件的 props 上，组件层级会随版本变化，
-   * 因此先尝试已知的几条路径，未命中时再沿 fiber 的 `return` 链向上有限回溯。
+   * 抖音不把消息实例挂在行组件的 props.message 上，而是把整个消息数组放在
+   * 聊天列表组件的 props.originalList 上；行元素带 data-index，即该消息在
+   * originalList 中的下标。因此需要沿 fiber 向上找到持有 originalList 的层级，
+   * 再用 data-index 取值（与「屏蔽 TA」取用户的路径一致）。
    */
   getMessageInstance($danmu: HTMLElement) {
-    /** 是否是消息实例（对象即可，后续由字段判定） */
-    const isMessageInstance = (inst: any) => typeof inst === "object" && inst != null;
-    const react = utils.getReactInstance($danmu);
-    const knownMessageIns =
-      react?.reactFiber?.return?.memoizedProps?.message ||
-      react?.reactFiber?.memoizedProps?.children?.props?.children?.props?.message ||
-      react?.reactContainer?.memoizedState?.element?.props?.message;
-    if (isMessageInstance(knownMessageIns)) {
-      return knownMessageIns;
+    const $row = $danmu.closest<HTMLElement>("[data-index]");
+    if (!$row) {
+      return undefined;
     }
-    // 已知路径均未命中，沿 fiber 向上回溯查找
-    let fiber = react?.reactFiber;
-    for (let depth = 0; depth < 20; depth++) {
-      const messageIns = fiber?.memoizedProps?.message;
-      if (isMessageInstance(messageIns)) {
-        return messageIns;
+    const index = parseInt($row.getAttribute("data-index") || "", 10);
+    if (!(index >= 0)) {
+      return undefined;
+    }
+    let fiber: ReactFiberNode | null | undefined = utils.getReactInstance($danmu)?.reactFiber;
+    for (let depth = 0; depth < 20 && fiber; depth++) {
+      const props = fiber.memoizedProps;
+      if (props && Array.isArray(props.originalList)) {
+        return props.originalList[index];
       }
-      fiber = fiber?.return;
-      if (fiber == null) {
-        break;
-      }
+      fiber = fiber.return;
     }
     return undefined;
   },

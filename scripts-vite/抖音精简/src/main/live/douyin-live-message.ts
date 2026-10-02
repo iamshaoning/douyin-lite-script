@@ -7,7 +7,7 @@
  * 解码器重建窗口期、绕开 `decode` 的消息需要在渲染后被移除，作为兜底。
  */
 import { addStyle } from "@/core/dom";
-import { LockFunction, mutationObserverBySelector } from "@/core/utils";
+import { mutationObserverBySelector } from "@/core/utils";
 import { DouYinRouter } from "@/router/douyin-router";
 import { DouYinLiveMessageFilter } from "@/main/live/douyin-live-message-filter";
 
@@ -16,13 +16,17 @@ export const DouYinLiveMessage = {
    * 监听聊天室 DOM 变化，对已渲染的消息做兜底过滤
    */
   filterMessage() {
-    // 弹幕越密变动越频繁，加锁限频避免高频全量扫描
-    const lockFn = new LockFunction(() => {
+    const runFilter = () => {
       if (!DouYinRouter.isLive()) return;
       DouYinLiveMessageFilter.change();
-    }, 250);
+    };
     DouYinLiveMessageFilter.init();
-    // 过滤只扫描聊天室内的弹幕，只观察 #chatroom，避免页面其它区域的变动触发扫描
+    // 过滤只扫描聊天室内的弹幕，只观察 #chatroom，避免页面其它区域的变动触发扫描。
+    //
+    // 这里必须同步执行，不能做节流/加锁：聊天列表是 React 虚拟列表，被 remove() 摘掉的行
+    // React 会在后续渲染里把同一条消息重新插回（新节点不带 data-is-filter）。若加锁把回调
+    // 推迟到下一轮，这些被重插的消息就会有明显可见的漏网窗口（实测同一房间可同时看到十余条
+    // 未过滤消息）。MutationObserver 本身已按批回调，无需再自行限频。
     const observer = mutationObserverBySelector(["#chatroom"], {
       config: {
         childList: true,
@@ -30,7 +34,7 @@ export const DouYinLiveMessage = {
       },
       immediate: true,
       callback: () => {
-        lockFn.run();
+        runFilter();
       },
     });
 
