@@ -10,10 +10,10 @@ type ToastType = "info" | "success" | "warning" | "error";
 const CONTAINER_ID = "dy-lite-toast-container";
 
 const TYPE_COLOR_MAP: Record<ToastType, string> = {
-  info: "#2b6cb0",
-  success: "#0eac0e",
-  warning: "#d69e2e",
-  error: "#e53e3e",
+  info: "#5b9cf5",
+  success: "#39c65b",
+  warning: "#e6a53c",
+  error: "#ef5350",
 };
 
 const TOAST_CSS = /* css */ `
@@ -33,11 +33,12 @@ const TOAST_CSS = /* css */ `
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  gap: 8px;
   max-width: 80vw;
-  padding: 10px 12px 10px 0;
-  border-radius: 4px;
-  background: #1f1f26;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  padding: 9px 14px;
+  border-radius: 6px;
+  background: rgba(30, 30, 34, 0.94);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.24);
   color: #f2f2f4;
   font-size: 13px;
   font-weight: 400;
@@ -48,12 +49,9 @@ const TOAST_CSS = /* css */ `
 #${CONTAINER_ID} .dy-lite-toast::before {
   content: "";
   flex: none;
-  width: 4px;
-  align-self: stretch;
-  margin-right: 8px;
-  border-radius: 4px 0 0 4px;
-}
-#${CONTAINER_ID} .dy-lite-toast[data-type="info"]::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: ${TYPE_COLOR_MAP.info};
 }
 #${CONTAINER_ID} .dy-lite-toast[data-type="success"]::before {

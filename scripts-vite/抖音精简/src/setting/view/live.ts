@@ -1,7 +1,7 @@
 /**
  * 设置面板-直播
  *
- * 包含清晰度、网页全屏、暂停弹窗、在线观众数、信息播报与底部遮挡区域的屏蔽
+ * 包含清晰度、网页全屏、暂停弹窗、在线观众数，以及「布局屏蔽-聊天室」与「聊天室消息过滤器」两个深层菜单
  */
 import { VideoQualityMap } from "@/main/live/douyin-live";
 import { PanelLiveMessageFilterViews } from "@/setting/view/live-message-filter";
@@ -48,26 +48,48 @@ export const PanelLiveConfig: PanelContentConfig = {
           "自动监听并检测弹窗"
         ),
         UISwitch("显示直播间在线观众具体人数", "dy-live-showLiveRoomAudienceCount", false),
-        UISwitch(
-          "【屏蔽】信息播报",
-          "dy-live-shieldMessage",
-          false,
-          void 0,
-          "顶部左右滚动播报（xxx进入/加入了直播间），底部滚动播报（xxx来了，xxx给主播点赞）"
-        ),
-        UISwitch(
-          "【屏蔽】底部遮挡区域",
-          "dy-live-blockBottomArea",
-          true,
-          void 0,
-          "该元素会遮挡部分聊天信息，导致显示不全"
-        ),
       ],
     },
     {
       text: "",
       type: "container",
       views: [
+        {
+          type: "deepMenu",
+          text: "布局屏蔽-聊天室",
+          views: [
+            {
+              type: "container",
+              text: "",
+              views: [
+                UISwitch("【屏蔽】贵宾席", "live-shieldChatRoomVipSeats"),
+                UISwitch("【屏蔽】用户等级图标", "dy-live-shieldUserLevelIcon"),
+                UISwitch("【屏蔽】VIP图标", "dy-live-shieldUserVIPIcon"),
+                UISwitch("【屏蔽】粉丝牌", "dy-live-shieldUserFansIcon"),
+              ],
+            },
+            {
+              type: "container",
+              text: "",
+              views: [
+                UISwitch(
+                  "【屏蔽】信息播报",
+                  "dy-live-shieldMessage",
+                  false,
+                  void 0,
+                  "顶部左右滚动播报（xxx进入/加入了直播间），底部滚动播报（xxx来了，xxx给主播点赞）"
+                ),
+                UISwitch(
+                  "【屏蔽】底部遮挡区域",
+                  "dy-live-blockBottomArea",
+                  true,
+                  void 0,
+                  "该元素会遮挡部分聊天信息，导致显示不全"
+                ),
+              ],
+            },
+          ],
+        },
         {
           type: "deepMenu",
           text: "聊天室消息过滤器",

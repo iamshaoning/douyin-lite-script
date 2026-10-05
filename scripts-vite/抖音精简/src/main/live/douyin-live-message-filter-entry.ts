@@ -90,6 +90,16 @@ export const DouYinLiveMessageFilterEntry = {
         immediate: true,
       }
     );
+    // 「显示浮动入口」开关：关掉后立即移除入口，重新打开立即补回
+    Panel.addValueChangeListener(
+      "live-danmu-filter-entry-show",
+      () => {
+        this.syncEntry();
+      },
+      {
+        immediate: true,
+      }
+    );
     // 页面自身或路由变化时元素可能被移除，定时补齐
     // 标签页不可见时无法产生交互，跳过轮询避免后台空跑
     setInterval(() => {
@@ -122,7 +132,7 @@ export const DouYinLiveMessageFilterEntry = {
    * 同步按钮的挂载状态（仅在直播页面显示）
    */
   syncEntry() {
-    if (!DouYinRouter.isLive()) {
+    if (!DouYinRouter.isLive() || !Panel.getValue("live-danmu-filter-entry-show")) {
       this.removeEntry();
       return;
     }

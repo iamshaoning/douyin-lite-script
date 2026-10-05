@@ -8,12 +8,67 @@ import { Panel } from "@/setting/panel";
 
 const DouYinLiveBlock_ChatRoom = {
   init() {
+    Panel.execMenuOnce("live-shieldChatRoomVipSeats", () => {
+      return this.shieldChatRoomVipSeats();
+    });
+    Panel.execMenuOnce("dy-live-shieldUserLevelIcon", () => {
+      return this.shieldUserLevelIcon();
+    });
+    Panel.execMenuOnce("dy-live-shieldUserVIPIcon", () => {
+      return this.shieldUserVIPIcon();
+    });
+    Panel.execMenuOnce("dy-live-shieldUserFansIcon", () => {
+      return this.shieldUserFansIcon();
+    });
     Panel.execMenuOnce("dy-live-shieldMessage", () => {
       return this.shieldMessage();
     });
     Panel.execMenuOnce("dy-live-blockBottomArea", () => {
       return this.blockBottomArea();
     });
+  },
+  /**
+   * 【屏蔽】贵宾席
+   *
+   * 聊天室顶部的贵宾/在线观众面板。容器结构随版本变化，这里覆盖三种形态：
+   * 以 `#audiencePanelScrollId` 或 `data-e2e="live-room-audience"` 标记的容器，
+   * 以及外层为 `pace-island` 自定义元素的新结构。
+   */
+  shieldChatRoomVipSeats() {
+    return addBlockCSS(
+      "#chatroom > div > div:has(#audiencePanelScrollId)",
+      '#chatroom > div > div:has([data-e2e="live-room-audience"])',
+      '#chatroom > pace-island > div > div:has([data-e2e="live-room-audience"])'
+    );
+  },
+  /**
+   * 【屏蔽】用户等级图标
+   *
+   * 等级图标有多个来源，需分别命中：普通消费等级（`level`）、等级增益（`aweme_grade_buff`）、联赛（`league`）
+   */
+  shieldUserLevelIcon() {
+    return addBlockCSS(
+      '#chatroom .webcast-chatroom___item *:has(>img[src*="level"])',
+      '#chatroom .webcast-chatroom___item *:has(>img[src*="aweme_grade_buff"])',
+      '#chatroom .webcast-chatroom___item *:has(>img[src*="league"])'
+    );
+  },
+  /**
+   * 【屏蔽】VIP图标
+   */
+  shieldUserVIPIcon() {
+    return addBlockCSS('#chatroom .webcast-chatroom___item *:has(>img[src*="subscribe"])');
+  },
+  /**
+   * 【屏蔽】粉丝牌
+   *
+   * 粉丝牌有两种渲染方式：图片（`img[src*="fansclub"]`）与带 `fansclub` 背景样式的 div，需分别命中
+   */
+  shieldUserFansIcon() {
+    return addBlockCSS(
+      '#chatroom .webcast-chatroom___item span:has(>div[style*="fansclub"])',
+      '#chatroom .webcast-chatroom___item *:has(>img[src*="fansclub"])'
+    );
   },
   /**
    * 【屏蔽】信息播报

@@ -15,6 +15,11 @@ export const PanelLiveMessageFilterViews: PanelViewConfig[] = [
   {
     type: "container",
     text: "",
+    views: [UISwitch("显示聊天室浮动入口", "live-danmu-filter-entry-show", true)],
+  },
+  {
+    type: "container",
+    text: "",
     views: [
       UISwitch("启用", "live-danmu-shield-rule-enable"),
       UISwitch("【屏蔽】送礼信息", "live-danmu-shield-gift"),

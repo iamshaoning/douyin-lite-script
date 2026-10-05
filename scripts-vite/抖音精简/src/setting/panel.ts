@@ -375,7 +375,11 @@ class PanelClass {
     const menuCommandCallback = () => {
       this.showPanel(this.$data.contentConfigList);
     };
-    GM_registerMenuCommand(`${SCRIPT_NAME}-设置`, menuCommandCallback);
+    GM_registerMenuCommand(`设置`, menuCommandCallback);
+    // 快捷开关：等价于点按设置里的「显示聊天室浮动入口」，切换后由该键的监听同步入口
+    GM_registerMenuCommand(`聊天室浮动入口开关`, () => {
+      this.setValue("live-danmu-filter-entry-show", !this.getValue("live-danmu-filter-entry-show", true));
+    });
   }
 
   /** 显示设置界面 */
