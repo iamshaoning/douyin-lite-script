@@ -4,7 +4,7 @@
 
 ### 修复
 
-- **「监听并关闭【长时间无操作，已暂停播放】弹窗」在推荐首页失效**：原实现只观察、只扫描 `.basePlayerContainer`，而推荐流是虚拟列表，播放器容器会被整体替换——观察一旦绑定到旧节点便永久失效；且该弹窗实际由框架渲染到 body 级浮层 / Semi portal 上，容器内根本找不到。现改为：观察目标扩充为 `.basePlayerContainer`、`#slidelist`、`.semi-portal`、`body > div[elementtiming='element-timing']`（含稳定宿主，容器被替换后仍能触发扫描）；扫描范围补齐 `.semi-portal` 与 body 级浮层；关闭函数查找对齐直播侧的同款弹窗处理——优先沿 `reactContainer` 下钻（含 `memoizedProps.onClose`、`memoizedState` 兜底），再兜底 `reactProps`、`reactFiber` 沿 `return` 上溯。
+- **「监听并关闭【长时间无操作，已暂停播放】弹窗」在推荐首页失效**
 
 ## 2026.10.05.01
 
