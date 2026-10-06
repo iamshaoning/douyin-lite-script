@@ -114,72 +114,137 @@ export const DouYinVideoPlayer = {
    * 长时间无操作，已暂停播放
    */
   waitToRemovePauseDialog() {
-    /** 已提示过的节点 */
+    /** 已提示过「出现弹窗」的节点，弹窗未消失时 DOM 每次变动都会重复命中同一节点，避免提示刷屏 */
     const notifiedSet = new WeakSet<HTMLElement>();
+    /** 已成功调用关闭函数的节点 */
+    const closedSet = new WeakSet<HTMLElement>();
     /**
      * 检测并关闭弹窗
      * @param $ele
+     * @param from 检测来源
      */
-    const checkDialogToClose = ($ele: HTMLElement) => {
+    const checkDialogToClose = ($ele: HTMLElement, from: string) => {
       // 脚本自己注入的节点（提示框、设置面板等）的文本也会包含关键词，必须跳过，否则会自我触发形成死循环
       if (isScriptNode($ele)) {
         return;
       }
       const eleText = DOMUtils.text($ele);
-      if (eleText.includes("长时间无操作") && eleText.includes("暂停播放")) {
-        // 弹窗未消失时 DOM 每次变动都会重复命中同一节点，避免提示刷屏
-        if (notifiedSet.has($ele)) {
-          return;
-        }
+      if (!eleText.includes("长时间无操作") || !eleText.includes("暂停播放")) {
+        return;
+      }
+      if (closedSet.has($ele)) {
+        return;
+      }
+      if (!notifiedSet.has($ele)) {
         notifiedSet.add($ele);
-        toast.info(`出现【长时间无操作，已暂停播放】弹窗`);
-        const $rect = utils.getReactInstance($ele);
-        if (typeof $rect.reactProps === "object" && $rect.reactProps != null) {
-          const closeDialogFn = utils.queryProperty($rect.reactProps, (obj) => {
-            if (typeof obj?.["props"]?.["onClose"] === "function") {
+        toast.info(`检测${from}：出现【长时间无操作，已暂停播放】弹窗`);
+      }
+      let closeDialogFn: Function | null | undefined = null;
+      const $rect = utils.getReactInstance($ele);
+      // 弹窗可能挂载在 React portal 上，优先沿 reactContainer 下钻
+      if (typeof $rect.reactContainer === "object" && $rect.reactContainer != null) {
+        closeDialogFn =
+          utils.queryProperty($rect.reactContainer, (obj) => {
+            if (typeof obj?.["onClose"] === "function") {
               return {
                 isFind: true,
-                data: obj["props"]["onClose"],
+                data: obj["onClose"],
+              };
+            } else if (typeof obj?.["memoizedProps"]?.["onClose"] === "function") {
+              return {
+                isFind: true,
+                data: obj["memoizedProps"]["onClose"],
               };
             } else {
               // 未找到，进入下一层
-              const children = obj?.["props"]?.["children"] ?? obj?.["children"];
               return {
                 isFind: false,
-                data: Array.isArray(children) ? children[0] : children,
+                data: obj?.["child"],
               };
             }
-          });
-          if (typeof closeDialogFn === "function") {
-            closeDialogFn();
-            toast.success(`调用函数关闭【长时间无操作，已暂停播放】弹窗`);
+          }) ?? $rect?.reactContainer?.memoizedState?.element?.props?.children?.props?.onClose;
+      }
+      // 兜底：沿 reactProps 的 props.children 下钻
+      if (typeof closeDialogFn !== "function" && typeof $rect.reactProps === "object" && $rect.reactProps != null) {
+        closeDialogFn = utils.queryProperty($rect.reactProps, (obj) => {
+          if (typeof obj?.["props"]?.["onClose"] === "function") {
+            return {
+              isFind: true,
+              data: obj["props"]["onClose"],
+            };
+          } else {
+            // 未找到，进入下一层
+            const children = obj?.["props"]?.["children"] ?? obj?.["children"];
+            return {
+              isFind: false,
+              data: Array.isArray(children) ? children[0] : children,
+            };
           }
-        }
+        });
+      }
+      // 兜底：沿 reactFiber 的 return 上溯
+      if (typeof closeDialogFn !== "function" && typeof $rect.reactFiber === "object" && $rect.reactFiber != null) {
+        closeDialogFn = utils.queryProperty($rect.reactFiber, (obj) => {
+          if (typeof obj?.["onClose"] === "function") {
+            return {
+              isFind: true,
+              data: obj["onClose"],
+            };
+          } else if (typeof obj?.["memoizedProps"]?.["onClose"] === "function") {
+            return {
+              isFind: true,
+              data: obj["memoizedProps"]["onClose"],
+            };
+          } else {
+            // 未找到，进入下一层
+            return {
+              isFind: false,
+              data: obj?.["return"],
+            };
+          }
+        });
+      }
+      if (typeof closeDialogFn === "function") {
+        closedSet.add($ele);
+        closeDialogFn();
+        toast.success(`检测${from}：调用函数关闭【长时间无操作，已暂停播放】弹窗`);
       }
     };
     const waitToRemovePauseDialog = getDynamicValue("dy-video-waitToRemovePauseDialog");
-    // 弹窗只会出现在播放器容器内，只观察该容器，避免页面任一变动都触发扫描
+    // 弹窗除了挂在播放器容器内，也可能由框架渲染到 body 级浮层或 Semi portal 上，
+    // 因此三类位置都要扫描
     const lockFn = new utils.LockFunction(() => {
       if (!waitToRemovePauseDialog.value) {
         return;
       }
-      [
-        ...Array.from($$<HTMLDivElement>(`.basePlayerContainer xg-bar.xg-right-bar + div`)),
-        ...Array.from($$<HTMLElement>(`.basePlayerContainer div:has(>div):contains("长时间无操作")`)),
-      ].forEach(($elementTiming) => {
-        checkDialogToClose($elementTiming);
+      $$<HTMLDivElement>(`.basePlayerContainer xg-bar.xg-right-bar + div`).forEach(($el) => {
+        checkDialogToClose($el, "1");
+      });
+      $$<HTMLElement>(`.basePlayerContainer div:has(>div):contains("长时间无操作")`).forEach(($el) => {
+        checkDialogToClose($el, "2");
+      });
+      $$<HTMLElement>(`.semi-portal > div:contains("长时间无操作")`).forEach(($el) => {
+        checkDialogToClose($el, "3");
+      });
+      $$<HTMLDivElement>(`body > div:not([id="root"]):not(:empty):contains("长时间无操作")`).forEach(($el) => {
+        checkDialogToClose($el, "4");
       });
     }, 400);
-    const observer = utils.mutationObserverBySelector([".basePlayerContainer"], {
-      config: {
-        subtree: true,
-        childList: true,
-      },
-      immediate: true,
-      callback: () => {
-        lockFn.run();
-      },
-    });
+    // 播放器容器会被推荐流的虚拟列表整体替换，观察一旦绑定到旧节点就会永久失效，
+    // 因此额外观察 #slidelist、.semi-portal 等稳定节点，避免弹窗出现在新节点里却无人触发扫描
+    const observer = utils.mutationObserverBySelector(
+      [".basePlayerContainer", "#slidelist", ".semi-portal", "body > div[elementtiming='element-timing']"],
+      {
+        config: {
+          subtree: true,
+          childList: true,
+        },
+        immediate: true,
+        callback: () => {
+          lockFn.run();
+        },
+      }
+    );
     return [
       () => {
         observer?.disconnect();
