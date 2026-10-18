@@ -86,6 +86,8 @@ interface MenuUser {
   uid: string;
   /** 用户 sec_uid，来自用户名链接的 href */
   secUid: string;
+  /** 用户名，取自被点击链接的文本，用于二次确认时核对目标 */
+  nickname: string;
   /** 被点击的用户名链接 */
   $link: HTMLAnchorElement;
 }
@@ -211,6 +213,7 @@ export const DouYinVideoCommentUserMenu = {
     this.$currentUser = {
       uid: $comment ? this.getCommentUserId($comment, secUid) : "",
       secUid,
+      nickname: ($link.textContent || "").trim(),
       $link,
     };
 
@@ -301,7 +304,12 @@ export const DouYinVideoCommentUserMenu = {
     if (!current) {
       return;
     }
-    const isConfirmed = await confirm("确定要屏蔽该用户吗？");
+    const targetText = current.nickname
+      ? `「${current.nickname}」`
+      : current.uid
+        ? `该用户（uid ${current.uid}）`
+        : "该用户";
+    const isConfirmed = await confirm(`确定要屏蔽${targetText}吗？`);
     if (!isConfirmed) {
       return;
     }

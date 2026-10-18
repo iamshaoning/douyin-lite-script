@@ -1,16 +1,22 @@
 /**
  * 直播页面的元素屏蔽
  *
- * 负责屏蔽聊天室的信息播报、底部遮挡区域，以及视频区域内的底部礼物栏。
+ * 负责屏蔽聊天室的信息播报、底部遮挡区域，视频区域内的底部礼物栏，
+ * 以及把贵宾席折叠为一行。
  */
-import { addBlockCSS, addStyle, removeStyle, waitNode } from "@/core/dom";
+import { addBlockCSS, addStyle, DOMUtils, removeStyle, waitNode } from "@/core/dom";
+import { DouYinRouter } from "@/router/douyin-router";
 import { Panel } from "@/setting/panel";
+
+/** 贵宾席面板容器标记 */
+const VIP_PANEL_ATTR = "data-dy-vip-panel";
+/** 贵宾席面板表头（折叠聊天按钮 + 在线观众数量）标记 */
+const VIP_HEADER_ATTR = "data-dy-vip-header";
+/** 贵宾席面板是否收起 */
+const VIP_COLLAPSED_ATTR = "data-dy-vip-collapsed";
 
 const DouYinLiveBlock_ChatRoom = {
   init() {
-    Panel.execMenuOnce("live-shieldChatRoomVipSeats", () => {
-      return this.shieldChatRoomVipSeats();
-    });
     Panel.execMenuOnce("dy-live-shieldUserLevelIcon", () => {
       return this.shieldUserLevelIcon();
     });
@@ -26,20 +32,6 @@ const DouYinLiveBlock_ChatRoom = {
     Panel.execMenuOnce("dy-live-blockBottomArea", () => {
       return this.blockBottomArea();
     });
-  },
-  /**
-   * 【屏蔽】贵宾席
-   *
-   * 聊天室顶部的贵宾/在线观众面板。容器结构随版本变化，这里覆盖三种形态：
-   * 以 `#audiencePanelScrollId` 或 `data-e2e="live-room-audience"` 标记的容器，
-   * 以及外层为 `pace-island` 自定义元素的新结构。
-   */
-  shieldChatRoomVipSeats() {
-    return addBlockCSS(
-      "#chatroom > div > div:has(#audiencePanelScrollId)",
-      '#chatroom > div > div:has([data-e2e="live-room-audience"])',
-      '#chatroom > pace-island > div > div:has([data-e2e="live-room-audience"])'
-    );
   },
   /**
    * 【屏蔽】用户等级图标
@@ -115,6 +107,90 @@ export const DouYinLiveBlock = {
     Panel.execMenuOnce("live-shieldGiftColumn", () => {
       return this.shieldGiftColumn();
     });
+    Panel.execMenuOnce(
+      "dy-live-collapsibleVipSeats",
+      () => {
+        if (!DouYinRouter.isLive()) {
+          return;
+        }
+        return this.collapsibleVipSeats();
+      },
+      void 0,
+      true
+    );
+  },
+  /**
+   * 贵宾席可收起
+   *
+   * 收起时只保留「折叠聊天按钮 + 在线观众数量」所在的一行，点击在线人数展开/收起。
+   * 面板节点会随切换直播间、人数刷新被整体替换，因此常驻轮询补标记，而不是只处理一次。
+   */
+  collapsibleVipSeats() {
+    /** 默认收起：启用该功能即代表要省空间 */
+    let collapsed = true;
+    /** 定位贵宾席面板：表头为在线人数所在行，面板容器为表头的父元素 */
+    const getPanel = () => {
+      const $audience = document.querySelector<HTMLElement>('#chatroom [data-e2e="live-room-audience"]');
+      const $header = $audience?.parentElement;
+      const $panel = $header?.parentElement;
+      return $header && $panel ? { $header, $panel } : null;
+    };
+    /** 把标记同步到当前节点（节点被替换后需要重新打） */
+    const sync = () => {
+      const target = getPanel();
+      if (target == null) {
+        return;
+      }
+      const { $header, $panel } = target;
+      // 值相同就不写，避免每轮轮询都产生一次属性变更
+      if ($header.getAttribute(VIP_HEADER_ATTR) !== "1") {
+        $header.setAttribute(VIP_HEADER_ATTR, "1");
+      }
+      if ($panel.getAttribute(VIP_PANEL_ATTR) !== "1") {
+        $panel.setAttribute(VIP_PANEL_ATTR, "1");
+      }
+      const collapsedValue = collapsed ? "1" : "0";
+      if ($panel.getAttribute(VIP_COLLAPSED_ATTR) !== collapsedValue) {
+        $panel.setAttribute(VIP_COLLAPSED_ATTR, collapsedValue);
+      }
+    };
+    sync();
+    const timer = setInterval(() => {
+      if (document.hidden || !DouYinRouter.isLive()) {
+        return;
+      }
+      sync();
+    }, 500);
+    // 点击在线人数切换收起/展开；捕获阶段拦截，避免同时触发抖音自己的在线观众列表
+    const listener = DOMUtils.on(
+      document,
+      "click",
+      '#chatroom [data-e2e="live-room-audience"]',
+      (event) => {
+        DOMUtils.preventEvent(event);
+        collapsed = !collapsed;
+        sync();
+      },
+      { capture: true, overrideTarget: false }
+    );
+    return [
+      addStyle(/*css*/ `
+        [${VIP_PANEL_ATTR}][${VIP_COLLAPSED_ATTR}="1"] > :not([${VIP_HEADER_ATTR}]) {
+          display: none !important;
+        }
+      `),
+      () => {
+        clearInterval(timer);
+        listener.off();
+        // 关闭功能时恢复面板显示
+        const target = getPanel();
+        if (target != null) {
+          target.$header.removeAttribute(VIP_HEADER_ATTR);
+          target.$panel.removeAttribute(VIP_PANEL_ATTR);
+          target.$panel.removeAttribute(VIP_COLLAPSED_ATTR);
+        }
+      },
+    ];
   },
   /**
    * 【屏蔽】底部的礼物栏

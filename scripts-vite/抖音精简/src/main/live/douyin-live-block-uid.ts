@@ -132,7 +132,9 @@ export const DouYinLiveBlockUid = {
       toast.error("没取到这条发言的uid，请到设置面板中手动添加");
       return;
     }
-    const isConfirmed = await confirm("确定要屏蔽该用户吗？屏蔽后不再显示其发言，并同时拉黑对方。");
+    const nickname = String(user?.nickname || user?.nickName || "").trim();
+    const targetText = nickname ? `「${nickname}」` : `该用户（uid ${uid}）`;
+    const isConfirmed = await confirm(`确定要屏蔽${targetText}吗？`);
     if (!isConfirmed) {
       return;
     }

@@ -48,6 +48,13 @@ export const PanelLiveConfig: PanelContentConfig = {
           void 0,
           "自动监听并检测弹窗"
         ),
+        UISwitch(
+          "贵宾席可收起",
+          "dy-live-collapsibleVipSeats",
+          false,
+          void 0,
+          "收起后只保留顶部折叠聊天按钮与在线观众数量所在的一行，点击在线人数展开/收起"
+        ),
         UISwitch("显示直播间在线观众具体人数", "dy-live-showLiveRoomAudienceCount", false),
       ],
     },
@@ -74,7 +81,6 @@ export const PanelLiveConfig: PanelContentConfig = {
               type: "container",
               text: "",
               views: [
-                UISwitch("【屏蔽】贵宾席", "live-shieldChatRoomVipSeats"),
                 UISwitch("【屏蔽】用户等级图标", "dy-live-shieldUserLevelIcon"),
                 UISwitch("【屏蔽】VIP图标", "dy-live-shieldUserVIPIcon"),
                 UISwitch("【屏蔽】粉丝牌", "dy-live-shieldUserFansIcon"),
