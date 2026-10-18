@@ -1,7 +1,8 @@
 /**
  * 设置面板-直播
  *
- * 包含清晰度、网页全屏、暂停弹窗、在线观众数，以及「布局屏蔽-聊天室」与「聊天室消息过滤器」两个深层菜单
+ * 包含清晰度、网页全屏、暂停弹窗、在线观众数，以及「布局屏蔽-视频区域内」
+ * 「布局屏蔽-聊天室」「聊天室消息过滤器」三个深层菜单
  */
 import { VideoQualityMap } from "@/main/live/douyin-live";
 import { PanelLiveMessageFilterViews } from "@/setting/view/live-message-filter";
@@ -54,6 +55,17 @@ export const PanelLiveConfig: PanelContentConfig = {
       text: "",
       type: "container",
       views: [
+        {
+          type: "deepMenu",
+          text: "布局屏蔽-视频区域内",
+          views: [
+            {
+              type: "container",
+              text: "",
+              views: [UISwitch("【屏蔽】底部的礼物栏", "live-shieldGiftColumn")],
+            },
+          ],
+        },
         {
           type: "deepMenu",
           text: "布局屏蔽-聊天室",

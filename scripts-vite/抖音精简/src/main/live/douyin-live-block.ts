@@ -1,9 +1,9 @@
 /**
- * 直播聊天室的元素屏蔽
+ * 直播页面的元素屏蔽
  *
- * 负责屏蔽聊天室的信息播报与底部遮挡区域。
+ * 负责屏蔽聊天室的信息播报、底部遮挡区域，以及视频区域内的底部礼物栏。
  */
-import { addBlockCSS, addStyle } from "@/core/dom";
+import { addBlockCSS, addStyle, removeStyle, waitNode } from "@/core/dom";
 import { Panel } from "@/setting/panel";
 
 const DouYinLiveBlock_ChatRoom = {
@@ -90,8 +90,11 @@ const DouYinLiveBlock_ChatRoom = {
       "#chatroom .webcast-chatroom__room-message",
       // 上面的滚动播报，xxx进入/加入了直播间
       // 横幅左侧的徽章会随用户身份变化（荣誉等级 enter_honor_level、粉丝团 fansclub_effect_badge 等），
-      // 改用徽章容器的 background-image 作为标记，避免只命中某一种徽章而漏屏蔽
-      '#chatroom > div > div > div:has(div[style*="background-image"])'
+      // 改用徽章容器的 background-image 作为标记，避免只命中某一种徽章而漏屏蔽；
+      // 徽章不一定是 div（可能是 span/img 等），因此不能把标记元素限定为 div。
+      // 另外有的徽章用 `background` 简写而非 `background-image`，补一条 `/enter` 路径的匹配
+      '#chatroom > div > div > div:has([style*="background-image"])',
+      '#chatroom > div > div > div:has([style*="/enter"])'
     );
   },
   /**
@@ -109,5 +112,57 @@ const DouYinLiveBlock_ChatRoom = {
 export const DouYinLiveBlock = {
   init() {
     DouYinLiveBlock_ChatRoom.init();
+    Panel.execMenuOnce("live-shieldGiftColumn", () => {
+      return this.shieldGiftColumn();
+    });
+  },
+  /**
+   * 【屏蔽】底部的礼物栏
+   *
+   * 礼物栏在不同端与不同版本里的容器结构各不相同，需分别命中。
+   * `#BottomLayout` 是整个底部区域，多机位直播时不能整体隐藏，因此等页面出现「多机位」
+   * 后给它打标记，改为只隐藏礼物栏本身。
+   */
+  shieldGiftColumn() {
+    const result: (HTMLStyleElement | undefined | (() => void))[] = [
+      addBlockCSS(
+        'div[data-e2e="living-container"] [id^="living_room_player_container"] > :last-child:has(.gitBarOptimizeEnabled)',
+        'div[data-e2e="living-container"] > div > div:has(> pace-island > .gitBarOptimizeEnabled)',
+        'div[data-e2e="living-container"] xg-controls > div:has(div[data-e2e="gifts-container"]):not(:has(video))',
+        "#BottomLayout:not([data-multi-camera])",
+        ".douyin-player .douyin-player-controls > div:nth-child(2):has(> .gitBarOptimizeEnabled)",
+        '[data-e2e="living-container"] > div div:has(> pace-island > .gitBarOptimizeEnabled)'
+      ),
+      // 礼物栏被移除后，上方工具栏的 bottom 偏移会留下空白
+      addStyle(/*css*/ `
+        div[data-e2e="living-container"] xg-controls xg-inner-controls:has(+ div div[data-e2e="gifts-container"]) {
+          bottom: 0 !important;
+        }
+      `),
+    ];
+
+    /** 是否已卸载，避免等待结束后又注入样式 */
+    let disposed = false;
+    let $bottomLayout: HTMLElement | null = null;
+    let multiCameraStyle: HTMLStyleElement | undefined;
+
+    waitNode("#BottomLayout:contains('多机位')", 10000).then(($el) => {
+      if (disposed || $el == null) {
+        return;
+      }
+      $bottomLayout = $el;
+      $bottomLayout.setAttribute("data-multi-camera", "true");
+      multiCameraStyle = addBlockCSS("#BottomLayout[data-multi-camera] .gitBarOptimizeEnabled");
+    });
+
+    result.push(() => {
+      disposed = true;
+      $bottomLayout?.removeAttribute("data-multi-camera");
+      $bottomLayout = null;
+      removeStyle(multiCameraStyle);
+      multiCameraStyle = undefined;
+    });
+
+    return result;
   },
 };

@@ -314,7 +314,14 @@ export const DouYinVideoPlayer = {
       const walker = document.createTreeWalker($comment, NodeFilter.SHOW_TEXT, {
         acceptNode: (node) => {
           const text = node.textContent || "";
-          return timeRegExpSearch.test(text) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          if (!timeRegExpSearch.test(text)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          // 用户名等标题文本里也可能出现 `12:34` 这类内容，不能替换成可点击的时间
+          if (node.parentElement?.closest("[data-click-from='title']")) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
         },
       });
 
@@ -415,8 +422,9 @@ export const DouYinVideoPlayer = {
       addStyle(/*css*/ `
         .dy-comment-time{
           cursor: pointer;
-          color: #48a4ff;
+          color: #48a4ff !important;
           text-decoration: none;
+          margin-right: .2em;
         }
       `),
       () => {
