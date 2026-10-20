@@ -6,10 +6,10 @@
 
 ## 安装与更新
 
-请先安装任一脚本管理器（Tampermonkey、Violentmonkey、ScriptCat 等），再从下列任一来源安装本脚本：
+请先安装任一脚本管理器（Tampermonkey、ScriptCat 等），再从下列任一来源安装本脚本：
 
-| 来源 | 安装地址 | 说明 |
-| --- | --- | --- |
+| 来源 | 安装地址 |
+| --- | --- |
 | GitHub（Raw） | [抖音精简.user.js](https://raw.githubusercontent.com/iamshaoning/douyin-lite-script/main/scripts-vite/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80/dist/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80.user.js) 
 | ScriptCat | [script-show-page/8146](https://scriptcat.org/zh-CN/script-show-page/8146)
 | GreasyFork | [scripts/597527](https://greasyfork.org/zh-CN/scripts/597527)
@@ -33,7 +33,7 @@
 
 ### 屏蔽 TA
 
-以下三个位置都会在原生菜单里追加「屏蔽 TA」，点击后弹出二次确认框，确认即调用抖音官方接口**拉黑**对方：
+以下三处会在原生菜单里追加「屏蔽 TA」，点击后弹出二次确认框，确认即调用抖音官方接口**拉黑**对方：
 
 | 位置 | 入口 | 屏蔽对象 |
 | --- | --- | --- |
