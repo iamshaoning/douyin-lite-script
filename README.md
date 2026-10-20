@@ -1,25 +1,25 @@
 # 抖音精简
 
-* 抖音网页版的精简与增强用户脚本：屏蔽多余的界面元素、自定义清晰度、过滤直播聊天室消息。
-* 本项目通过仿照WhiteSevs大佬的「抖音优化」脚本，由AI操刀重写所得，样式与配色仿抖音风格，精简了很多我不需要的功能，强化了直播聊天过滤的功能，修复了一些问题。
-* 原脚本链接：[Github](https://github.com/WhiteSevs/TamperMonkeyScript/tree/master/scripts-vite/%E6%8A%96%E9%9F%B3%E4%BC%98%E5%8C%96)、[Greasyfork](https://greasyfork.org/zh-CN/scripts/494643-%E6%8A%96%E9%9F%B3%E4%BC%98%E5%8C%96)
+* 抖音网页版的精简脚本：屏蔽一些广告和提示，屏蔽视频流和直播间多余的界面元素、自定义视频与直播默认清晰度、过滤直播聊天室消息、部分功能增强与优化。
+* 本项目通过仿照WhiteSevs大佬的「抖音优化」脚本，由AI操刀重写所得，样式与配色仿抖音风格，精简了很多我认为不需要的功能，强化了直播聊天的过滤功能，修复了一些存在的问题。
+* 原脚本链接：[Github](https://github.com/WhiteSevs/TamperMonkeyScript/tree/master/scripts-vite/%E6%8A%96%E9%9F%B3%E4%BC%98%E5%8C%96)、[Greasyfork](https://greasyfork.org/zh-CN/scripts/494643)、[Scriptcat](https://scriptcat.org/zh-CN/script-show-page/2534)
 
 ## 安装与更新
 
-先安装用户脚本管理器（Tampermonkey、Violentmonkey、ScriptCat 等），再从下列任一来源安装本脚本：
+请先安装任一脚本管理器（Tampermonkey、Violentmonkey、ScriptCat 等），再从下列任一来源安装本脚本：
 
 | 来源 | 安装地址 | 说明 |
 | --- | --- | --- |
-| GitHub（Raw） | [抖音精简.user.js](https://raw.githubusercontent.com/iamshaoning/douyin-lite-script/main/scripts-vite/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80/dist/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80.user.js) | 最新构建，随仓库提交更新，适合跟进开发进度 |
-| ScriptCat | [script-show-page/8146](https://scriptcat.org/zh-CN/script-show-page/8146) | 脚本猫商店，支持自动更新与版本历史 |
-| GreasyFork | [scripts/597527](https://greasyfork.org/zh-CN/scripts/597527-%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80) | 油叉商店，支持自动更新与版本历史 |
+| GitHub（Raw） | [抖音精简.user.js](https://raw.githubusercontent.com/iamshaoning/douyin-lite-script/main/scripts-vite/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80/dist/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80.user.js) 
+| ScriptCat | [script-show-page/8146](https://scriptcat.org/zh-CN/script-show-page/8146)
+| GreasyFork | [scripts/597527](https://greasyfork.org/zh-CN/scripts/597527)
 
 ## 设置面板位置
 
-- **位置一**：点击浏览器工具栏的油猴图标 → 菜单命令「抖音精简-设置」。
-- **位置二**（仅直播页）：聊天区右侧有一个**过滤器浮动按钮**，可拖动，位置会自动记忆；点击打开聊天室消息过滤器。
+- **位置一**：点击浏览器工具栏的脚本管理器图标 → 菜单命令「抖音精简-设置」。
+- **位置二**（仅用于直播页快速打开聊天过滤器）：直播间的聊天区右下方有一个**过滤器浮动按钮**，可拖动。
 
-## 聊天室消息过滤器增强
+## 聊天室消息过滤器增强功能
 
 | 选项 | 说明 |
 | --- | --- |
@@ -27,9 +27,9 @@
 | 消费等级下限 | 消费等级低于该值的用户发言被过滤，`0` 表示不启用 |
 | 屏蔽用户uid | 每行一个 uid，也可用逗号、分号、空格分隔；`#` 开头的行视为注释 |
 
-> 「屏蔽用户uid」「仅显示当前主播粉丝团发言」「消费等级下限」只对**用户发言类消息**生效（普通消息、emoji、上屏、展馆消息等）；送礼、福袋、信息播报等类型走各自的开关。
+> 以上选项只对**用户发言类消息**生效（普通消息、emoji、上屏、展馆消息等）；送礼、福袋、信息播报等类型走各自开关。
 
-## 快捷操作
+## 新增快捷操作
 
 ### 屏蔽 TA
 
@@ -37,15 +37,14 @@
 
 | 位置 | 入口 | 屏蔽对象 |
 | --- | --- | --- |
-| 直播聊天室 | 点击或右键某条发言，在弹出菜单中选「屏蔽 TA」 | 该条发言的用户 |
-| 视频评论区 | 点击评论区的用户名，在弹出菜单中选「屏蔽 TA」 | 该条评论的用户 |
-| 播放区域 | 在视频/直播画面上右键，在原生菜单中选「屏蔽 TA」 | 视频作者 / 当前直播主播 |
+| 直播间聊天区 | 点击聊天区发言，弹出菜单中新增「屏蔽 TA」 | 该条发言的用户 |
+| 视频流评论区 | 点击评论区用户名，弹出菜单中新增「屏蔽 TA」 | 该条评论的用户 |
+| 视频流播放器 | 在播放器画面上右键，弹出菜单中新增「屏蔽 TA」 | 视频作者 / 当前直播主播 |
 
-> 三处「屏蔽 TA」均为抖音红（`#fe2c55`）。
-> 只有直播聊天室里的「屏蔽 TA」会同时把 uid 写入下方的**屏蔽用户uid**名单（仅作用于聊天室发言）；其余两处只做官方拉黑。
+> 直播聊天室里的「屏蔽 TA」会同时把 uid 写入下方的**屏蔽用户uid**名单；其余两处只做官方拉黑。
 > 官方拉黑需要先定位抖音自身的拉黑接口，偶发首次点击可能提示「没找到抖音的拉黑接口，请再点一次重试」，再点一次即可。
-> 信息流中「未进入直播间模式」的直播预览卡也已适配（其右键菜单形态与普通视频不同）。
+> 视频流中「未进入直播间模式」的直播预览卡也已适配。
 
 ### 屏蔽该词
 
-- **屏蔽该词**：在聊天室中划选一段文字，选区上方会弹出「屏蔽该词」按钮，点击后按字面量加入屏蔽规则。
+- **屏蔽该词**：在聊天室中划选一段文字，选区上方会弹出「屏蔽该词」按钮，点击后按字面量加入聊天室消息过滤器的屏蔽规则。
