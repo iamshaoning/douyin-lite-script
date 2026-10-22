@@ -12,7 +12,6 @@
 | --- | --- |
 | GitHub（Raw） | [抖音精简.user.js](https://raw.githubusercontent.com/iamshaoning/douyin-lite-script/main/scripts-vite/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80/dist/%E6%8A%96%E9%9F%B3%E7%B2%BE%E7%AE%80.user.js) 
 | ScriptCat | [script-show-page/8146](https://scriptcat.org/zh-CN/script-show-page/8146)
-| GreasyFork | [scripts/597527](https://greasyfork.org/zh-CN/scripts/597527)
 
 ## 设置面板位置
 
