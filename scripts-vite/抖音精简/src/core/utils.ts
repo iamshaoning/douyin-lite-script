@@ -217,6 +217,10 @@ interface DisconnectableObserver {
  * 目标节点由前端框架动态挂载，可能尚未渲染：未命中时先在根节点上等待其出现，
  * 命中后只观察目标节点本身。相比直接观察整个文档，回调触发频率可大幅降低。
  *
+ * 目标节点被整体替换（SPA 路由重建、评论面板开合、虚拟列表换页）后，观察器会挂在
+ * 已脱离文档的旧节点上、从此不再触发。因此额外常驻看护，定期比对当前 DOM：
+ * 节点集合变化就重新绑定，避免功能因为一次重建而永久失效。
+ *
  * @param selectors CSS 选择器
  * @param option observe 配置（等待阶段固定使用 `{ childList: true, subtree: true }`）
  */
@@ -230,11 +234,17 @@ export function mutationObserverBySelector(
   }
   const selectorList = Array.isArray(selectors) ? selectors : [selectors];
   let targetObserver: MutationObserver | undefined;
+  let rootObserver: MutationObserver | undefined;
+  /** 当前正在观察的节点 */
+  let observedNodeList: Element[] = [];
+
   /** 断开对目标节点的观察 */
   const disconnectTarget = () => {
     targetObserver?.disconnect();
     targetObserver = undefined;
+    observedNodeList = [];
   };
+
   /** 观察当前已渲染的目标节点，返回是否已命中 */
   const observeTarget = () => {
     const $nodeList: Element[] = [];
@@ -242,27 +252,58 @@ export function mutationObserverBySelector(
       $nodeList.push(...document.querySelectorAll(selector));
     });
     if ($nodeList.length === 0) {
+      // 节点已被移除，断开旧观察，等新节点出现再绑定
+      if (targetObserver != null) {
+        disconnectTarget();
+      }
       return false;
+    }
+    // 仍是同一批节点且观察器有效，无需重复绑定（重复绑定会让 immediate 回调重复执行）
+    if (
+      targetObserver != null &&
+      $nodeList.length === observedNodeList.length &&
+      $nodeList.every(($el, index) => $el === observedNodeList[index])
+    ) {
+      return true;
     }
     disconnectTarget();
     targetObserver = mutationObserver($nodeList, option);
+    observedNodeList = $nodeList;
     return true;
   };
-  if (observeTarget()) {
-    return { disconnect: disconnectTarget };
+
+  /** 已命中则停止根节点上的等待 */
+  const stopRootObserver = () => {
+    rootObserver?.disconnect();
+    rootObserver = undefined;
+  };
+
+  if (!observeTarget()) {
+    // 目标节点尚未渲染，先在根节点上等待其出现
+    rootObserver = mutationObserver(document.documentElement, {
+      config: { childList: true, subtree: true },
+      callback: () => {
+        if (observeTarget()) {
+          stopRootObserver();
+        }
+      },
+    });
   }
-  // 目标节点尚未渲染，先在根节点上等待其出现
-  const rootObserver = mutationObserver(document.documentElement, {
-    config: { childList: true, subtree: true },
-    callback: () => {
-      if (observeTarget()) {
-        rootObserver?.disconnect();
-      }
-    },
-  });
+
+  // 常驻看护：目标节点被整体替换后重新绑定
+  const watcher = setInterval(() => {
+    if (document.hidden) {
+      return;
+    }
+    if (observeTarget()) {
+      stopRootObserver();
+    }
+  }, 1000);
+
   return {
     disconnect() {
-      rootObserver?.disconnect();
+      clearInterval(watcher);
+      stopRootObserver();
       disconnectTarget();
     },
   };

@@ -118,7 +118,6 @@ export const PanelGeneralConfig: PanelContentConfig = {
                 UISwitch("【屏蔽】客户端提示", "shieldClientTip", true),
                 UISwitch("【屏蔽】充钻石", "shieldFillingBricksAndStones", true),
                 UISwitch("【屏蔽】客户端", "shieldClient", true),
-                UISwitch("【屏蔽】快捷访问", "shieldQuickAccess"),
                 UISwitch("【屏蔽】通知", "shieldNotifitation"),
                 UISwitch("【屏蔽】消息", "shieldPrivateMessage"),
                 UISwitch("【屏蔽】投稿", "shieldSubmission"),

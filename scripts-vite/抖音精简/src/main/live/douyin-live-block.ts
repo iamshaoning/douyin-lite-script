@@ -4,7 +4,7 @@
  * 负责屏蔽聊天室的信息播报、底部遮挡区域，视频区域内的底部礼物栏，
  * 以及把贵宾席折叠为一行。
  */
-import { addBlockCSS, addStyle, DOMUtils, removeStyle, waitNode } from "@/core/dom";
+import { addBlockCSS, addStyle, DOMUtils, removeStyle } from "@/core/dom";
 import { DouYinRouter } from "@/router/douyin-router";
 import { Panel } from "@/setting/panel";
 
@@ -217,22 +217,33 @@ export const DouYinLiveBlock = {
       `),
     ];
 
-    /** 是否已卸载，避免等待结束后又注入样式 */
+    /** 是否已卸载，避免轮询结束后又注入样式 */
     let disposed = false;
     let $bottomLayout: HTMLElement | null = null;
     let multiCameraStyle: HTMLStyleElement | undefined;
 
-    waitNode("#BottomLayout:contains('多机位')", 10000).then(($el) => {
-      if (disposed || $el == null) {
+    // 多机位直播不能整体隐藏 #BottomLayout，需要给它打标记后只隐藏礼物栏。
+    // 「多机位」文案出现的时机不确定（可能晚于页面加载），因此常驻轮询、每次比对当前节点
+    const multiCameraTimer = setInterval(() => {
+      if (disposed || document.hidden) {
         return;
       }
-      $bottomLayout = $el;
-      $bottomLayout.setAttribute("data-multi-camera", "true");
-      multiCameraStyle = addBlockCSS("#BottomLayout[data-multi-camera] .gitBarOptimizeEnabled");
-    });
+      const $el = document.querySelector<HTMLElement>("#BottomLayout");
+      if ($el == null || !($el.textContent || "").includes("多机位")) {
+        return;
+      }
+      if ($el.getAttribute("data-multi-camera") !== "true") {
+        $el.setAttribute("data-multi-camera", "true");
+        $bottomLayout = $el;
+      }
+      if (multiCameraStyle == null) {
+        multiCameraStyle = addBlockCSS("#BottomLayout[data-multi-camera] .gitBarOptimizeEnabled");
+      }
+    }, 1000);
 
     result.push(() => {
       disposed = true;
+      clearInterval(multiCameraTimer);
       $bottomLayout?.removeAttribute("data-multi-camera");
       $bottomLayout = null;
       removeStyle(multiCameraStyle);

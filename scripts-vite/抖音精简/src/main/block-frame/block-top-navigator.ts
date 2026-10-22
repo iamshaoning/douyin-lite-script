@@ -1,10 +1,10 @@
 /**
  * 【屏蔽】抖音顶部导航栏
  *
- * 包含客户端提示、充钻石、客户端、快捷访问、通知、消息、投稿、壁纸、
+ * 包含客户端提示、充钻石、客户端、通知、消息、投稿、壁纸、
  * 右侧菜单栏、更多、登录头像、AI 搜索等顶部区域的屏蔽规则。
  */
-import { addBlockCSS, addStyle, DOMUtils } from "@/core/dom";
+import { addBlockCSS, addStyle } from "@/core/dom";
 import { DouYinRouter } from "@/router/douyin-router";
 import { Panel } from "@/setting/panel";
 
@@ -35,14 +35,6 @@ export const BlockTopNavigator = {
       "shieldClient",
       () => {
         return this.shieldClient();
-      },
-      void 0,
-      true
-    );
-    Panel.execMenuOnce(
-      "shieldQuickAccess",
-      () => {
-        return this.shieldQuickAccess();
       },
       void 0,
       true
@@ -161,29 +153,6 @@ export const BlockTopNavigator = {
           '.semi-portal-inner .semi-dropdown-content .semi-dropdown-item:has(a[download][href*="client"])'
         )
       );
-    }
-    return result;
-  },
-  /**
-   * 【屏蔽】快捷访问
-   */
-  shieldQuickAccess() {
-    const result = [];
-    result.push(
-      addBlockCSS(
-        'header pace-island[id^="island"] > div[class]:has(div[data-e2e="something-button"]) > :has(.quick-access-nav-icon)',
-        // 直播 更多里面的 快捷访问
-        // '.semi-portal-inner .semi-dropdown-content .semi-dropdown-item'
-        // 2024.7.15 更新规则
-        'div[id^="douyin-header-menu"] pace-island > div > div:has(.quick-access-nav-icon)'
-      )
-    );
-    if (isSearchPage()) {
-      // 搜索页面
-      result.push(addBlockCSS("div:has(>div>div>.quick-access-nav-icon)"));
-      DOMUtils.waitNode('li.semi-dropdown-item[role="menuitem"]:contains("快捷访问")', 10000).then(($semi) => {
-        DOMUtils.remove($semi);
-      });
     }
     return result;
   },

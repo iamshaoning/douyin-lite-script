@@ -418,6 +418,14 @@ export const DouYinVideoPlayer = {
         lockFn.run();
       },
     });
+    // 低频轮询兜底：评论区滚动时 400ms 的加锁会丢弃锁窗口内的变动，
+    // 评论面板重建瞬间的变动也可能被错过；轮询始终按当前 DOM 扫描，保证新增评论最终都会被处理
+    const timer = setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      lockFn.run();
+    }, 1000);
     return [
       addStyle(/*css*/ `
         .dy-comment-time{
@@ -428,6 +436,7 @@ export const DouYinVideoPlayer = {
         }
       `),
       () => {
+        clearInterval(timer);
         listener.off();
         observer?.disconnect();
         $$('[data-e2e="comment-item"][data-dy-time-processed]').forEach(($commentItem) => {
