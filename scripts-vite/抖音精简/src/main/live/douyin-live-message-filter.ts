@@ -24,6 +24,21 @@ const USER_CHAT_METHODS = [
   "WebcastExhibitionChatMessage",
 ];
 
+/**
+ * 已知带 `user` 和文本 `content`、但不属于「用户发言」的消息类型
+ *
+ * 用于结构兜底判定时排除系统播报、粉丝团升级提示等非聊天内容
+ */
+const NON_CHAT_CONTENT_METHODS = [
+  "WebcastRoomMessage",
+  "WebcastFansclubMessage",
+  "WebcastGiftMessage",
+  "WebcastMemberMessage",
+  "WebcastLikeMessage",
+  "WebcastSocialMessage",
+  "WebcastControlMessage",
+];
+
 export const DouYinLiveMessageFilter = {
   key: "douyin-live-danmu-rule",
   /** 屏蔽用户uid的存储键 */
@@ -226,6 +241,112 @@ export const DouYinLiveMessageFilter = {
     return typeof method === "string" && USER_CHAT_METHODS.includes(method);
   },
   /**
+   * 是否属于「用户发言」（含类型未知时的结构兜底）
+   *
+   * `USER_CHAT_METHODS` 只是已知类型白名单：抖音新增或改名消息类型时，发言会带着
+   * 不认识的 method 进来，整段身份过滤（黑名单|粉丝团|消费等级）被跳过，表现就是
+   * 非粉丝团成员的发言漏出。因此再按结构兜底：带 `user` 且有文本 `content` 即视为发言，
+   * 显式排除系统播报、粉丝团提示等已知的非聊天类型。
+   */
+  isUserChatLike(payload: any, method?: string) {
+    if (this.isUserChat(method)) {
+      return true;
+    }
+    if (!payload?.user) {
+      return false;
+    }
+    if (typeof method === "string" && NON_CHAT_CONTENT_METHODS.includes(method)) {
+      return false;
+    }
+    const content = payload?.content;
+    return typeof content === "string" && content.trim() !== "";
+  },
+  /**
+   * 获取行内粉丝牌元素的命中情况
+   *
+   * 粉丝牌有两种渲染方式：图片（`img[src*="fansclub"]`）与带 `fansclub` 背景样式的元素。
+   * 只看 DOM 中是否存在，不受「【屏蔽】粉丝牌」的 `display:none` 影响。
+   */
+  getFansClubBadgeInfo($danmu: HTMLElement) {
+    const $badge = $danmu.querySelector<HTMLElement>('img[src*="fansclub"], [style*="fansclub"], [class*="fansclub"]');
+    if ($badge == null) {
+      return "无";
+    }
+    const src = $badge.getAttribute("src") || "";
+    const className = typeof $badge.className === "string" ? $badge.className : "";
+    return [
+      `<${$badge.tagName.toLowerCase()}`,
+      src ? ` src=${src.slice(0, 60)}` : "",
+      className ? ` class=${className.slice(0, 40)}` : "",
+      ">",
+    ].join("");
+  },
+  /**
+   * 生成聊天区当前实际显示的消息快照
+   *
+   * 只解析过滤后仍留在聊天区 DOM 里的行，不累积历史，用于确认「留下来的消息是否符合规则」。
+   * 每条消息输出消息类型、消息 id、用户身份、粉丝团完整数据、粉丝牌命中元素与行文本，
+   * 便于只凭一份复制内容定位问题。由设置面板在打开期间定时调用，面板关闭后不再调用。
+   */
+  getDisplayedMessagesText() {
+    const anchorId = this.getCurrentAnchorId();
+    const $itemList = Array.from($$<HTMLElement>(".webcast-chatroom___item"));
+    const lines: string[] = [
+      `当前主播=${anchorId || "(未取到)"}`,
+      `聊天区条目=${$itemList.length}`,
+      `开关 仅粉丝团=${this.$data.only_fans_club ? "开" : "关"} | 消费等级下限=${this.$data.min_pay_grade || "关"} | 屏蔽 uid=${this.$data.blacklist.length} 条 | 屏蔽规则=${this.$data.rule.length} 条`,
+      "",
+    ];
+    if ($itemList.length === 0) {
+      lines.push("聊天区没有条目");
+      return lines.join("\n");
+    }
+    $itemList.forEach(($item) => {
+      const $row = $item.closest<HTMLElement>("[data-index]");
+      const dataIndex = $row?.getAttribute("data-index") ?? "-";
+      const rowText = ($item.textContent || "").trim().slice(0, 80);
+      const messageInst = this.getMessageInstance($item);
+      if (messageInst == null) {
+        // 取不到实例既没法判定也不会被移除，是最需要反馈的一类漏网，字段给全
+        lines.push(
+          `#${dataIndex} [取不到消息实例]`,
+          `  行 data-index=${dataIndex} | 灯牌=${this.getFansClubBadgeInfo($item)} | 类名=${$item.className || "-"}`,
+          `  行文本=${rowText}`,
+          ""
+        );
+        return;
+      }
+      const payload = messageInst?.payload ?? {};
+      const common = payload.common ?? {};
+      const user = payload.user ?? {};
+      const content = typeof payload.content === "string" ? payload.content : "";
+      const fansClubData = user.fans_club?.data;
+      const level = Number(fansClubData?.level || 0);
+      const clubAnchorId = String(fansClubData?.anchor_id || "");
+      // 与 checkMessageFilter 中「仅显示当前主播粉丝团发言」的判定保持一致
+      const isFansClub = level > 0 && (!anchorId || clubAnchorId === anchorId);
+      const method = messageInst?.method ?? common.method;
+      const uid = this.getUserId(user);
+      const msgId = common.msg_id ?? common.msgId ?? common.msg_id_str ?? "-";
+      // 粉丝团数据可能来自 protobuf 转换对象，序列化失败时不能拖垮整个诊断
+      let fansClubText = "(无)";
+      try {
+        fansClubText = JSON.stringify(fansClubData ?? null).slice(0, 240);
+      } catch {
+        fansClubText = "(无法序列化)";
+      }
+      lines.push(
+        `#${dataIndex} [${isFansClub ? "粉丝团" : "非成员"}] ${content.slice(0, 60) || common.describe || "(无正文)"}`,
+        `  消息 method=${method ?? "-"} | common.method=${common.method ?? "-"} | msgId=${msgId} | chat_by=${payload.chat_by ?? "-"} | biz_scene=${payload.biz_scene ?? "-"} | 顶层键=${Object.keys(messageInst).join(",")}`,
+        `  用户 uid=${uid || "-"} | 昵称=${user.nickname ?? user.nickName ?? "-"} | 消费等级=${Number(user.pay_grade?.level || 0)} | 粉丝团=${fansClubText}`,
+        `  判定 发言类=${this.isUserChatLike(payload, method) ? "是" : "否"} | 团主播=${clubAnchorId || "-"} | 当前主播=${anchorId || "-"} | 灯牌=${this.getFansClubBadgeInfo($item)} | 在黑名单=${uid && this.$data.blacklist.includes(uid) ? "是" : "否"}`,
+        `  行 data-index=${dataIndex} | 文本=${rowText}`,
+        ""
+      );
+    });
+    return lines.join("\n").trimEnd();
+  },
+  /**
    * 获取当前直播间主播的uid
    */
   getCurrentAnchorId() {
@@ -265,9 +386,17 @@ export const DouYinLiveMessageFilter = {
    * 通知消息改变(可能是新增)
    */
   change() {
-    this.execMessageFilterWithNode(
-      Array.from($$<HTMLElement>("#chatroom .webcast-chatroom .webcast-chatroom___item:not([data-is-filter])"))
-    );
+    this.execMessageFilterWithNode(this.getChatItemList());
+  },
+  /**
+   * 获取尚未判定的发言元素
+   *
+   * 全文档取而不是只取 `#chatroom` 内：聊天室在全屏、小窗、剧场模式下会整体移出
+   * `#chatroom`（甚至挂到 body 下），只按 `#chatroom` 取会整片漏过滤。
+   * `webcast-chatroom___item` 数量有限（虚拟列表只保留可视区几十条），全局查询开销可忽略。
+   */
+  getChatItemList() {
+    return Array.from($$<HTMLElement>(".webcast-chatroom___item:not([data-is-filter])"));
   },
   /**
    * 获取聊天室条目元素上挂载的消息实例
@@ -287,7 +416,8 @@ export const DouYinLiveMessageFilter = {
       return undefined;
     }
     let fiber: ReactFiberNode | null | undefined = utils.getReactInstance($danmu)?.reactFiber;
-    for (let depth = 0; depth < 20 && fiber; depth++) {
+    // 深度放宽到 40：聊天室虚拟列表的层级会随版本变化，20 层在部分结构下够不到 originalList
+    for (let depth = 0; depth < 40 && fiber; depth++) {
       const props = fiber.memoizedProps;
       if (props && Array.isArray(props.originalList)) {
         return props.originalList[index];
@@ -349,7 +479,7 @@ export const DouYinLiveMessageFilter = {
 
     // 以下三项仅对「用户发言类消息」生效（只有这类消息带 user 身份信息）
     const user = payload?.user;
-    if (this.isUserChat(method)) {
+    if (this.isUserChatLike(payload, method)) {
       // 屏蔽用户uid
       if (this.$data.blacklist.length !== 0) {
         const uid = this.getUserId(user);

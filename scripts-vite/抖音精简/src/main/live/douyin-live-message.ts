@@ -38,6 +38,16 @@ export const DouYinLiveMessage = {
       },
     });
 
+    // 兜底巡检：MutationObserver 只对已绑定的节点生效，节点被整体替换的间隙、
+    // 以及行元素与 originalList 索引错位导致取不到消息实例时都会漏掉个别行。
+    // 聊天室元素数量有限，低频全量扫描的代价可以忽略。
+    const timer = setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      runFilter();
+    }, 500);
+
     return [
       addStyle(/*css*/ `
 				/* 修复一下聊天室屏蔽了某些聊天导致上下抖动不停 */
@@ -46,6 +56,7 @@ export const DouYinLiveMessage = {
 				}
 			`),
       () => observer?.disconnect(),
+      () => clearInterval(timer),
     ];
   },
   /**
