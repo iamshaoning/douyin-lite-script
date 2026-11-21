@@ -132,7 +132,7 @@ export const DouYinLiveMessageFilterEntry = {
    * 同步按钮的挂载状态（仅在直播页面显示）
    */
   syncEntry() {
-    if (!DouYinRouter.isLive() || !Panel.getValue("live-danmu-filter-entry-show")) {
+    if (!DouYinRouter.isLive() || DouYinRouter.isLiveUCenter() || !Panel.getValue("live-danmu-filter-entry-show")) {
       this.removeEntry();
       return;
     }

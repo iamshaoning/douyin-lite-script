@@ -32,6 +32,16 @@ export const DouYinRouter = {
     return parseURL(href).hostname === "live.douyin.com" || this.isFollowLive(href) || this.isRootLive(href);
   },
   /**
+   * 直播用户中心
+   *
+   * + live.douyin.com/ucenter/
+   *
+   * 属于直播域名，但不是直播间，不能按直播页初始化
+   */
+  isLiveUCenter(href?: string) {
+    return this.isLive(href) && getPathname(href).startsWith("/ucenter/");
+  },
+  /**
    * 关注-直播
    *
    * + /follow/live/

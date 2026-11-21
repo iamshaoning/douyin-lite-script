@@ -26,8 +26,8 @@ import { DouYinVideoPlayer } from "@/main/video/player/douyin-video-player";
 
 export const DouYin = {
   init() {
-    if (!(DouYinRouter.isIndex() || DouYinRouter.isLive())) {
-      // 当前仅主站和直播页面支持
+    if (!(DouYinRouter.isIndex() || DouYinRouter.isLive()) || DouYinRouter.isLiveUCenter()) {
+      // 当前仅主站和直播页面支持，直播用户中心除外
       log.error(`当前仅主站和直播页面支持${globalThis.self === globalThis.top ? "" : "（iframe）"}`);
       return;
     }

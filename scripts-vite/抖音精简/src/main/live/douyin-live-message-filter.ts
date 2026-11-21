@@ -65,7 +65,13 @@ export const DouYinLiveMessageFilter = {
     $blacklistTextarea: null as HTMLTextAreaElement | null,
     /** 设置面板中的屏蔽规则输入框，用于划词「屏蔽该词」时回填 */
     $ruleTextarea: null as HTMLTextAreaElement | null,
+    /** 已判定过的行元素 -> data-index，用于跳过未变化行的重复判定与 fiber 查找 */
+    $checkedRows: new WeakMap<Element, number>(),
+    /** 聊天列表根节点缓存，减少兜底全量扫描时的全局查询 */
+    $listRoot: null as HTMLElement | null,
   },
+  /** 设置项初始化中，避免 immediate 回调触发全量复检 */
+  $initializing: false,
   /** 是否已初始化，避免重复注册监听 */
   $inited: false,
   init() {
@@ -105,17 +111,23 @@ export const DouYinLiveMessageFilter = {
         callback: (v: number | string) => (this.$data.min_pay_grade = Number(v) || 0),
       },
     ];
+    this.$initializing = true;
     optionList.forEach((item) => {
       Panel.addValueChangeListener(
         item.key,
         (_, value) => {
           item.callback(value);
+          // 用户修改规则后，已判定为保留的可见消息需要按新规则复检
+          if (!this.$initializing) {
+            this.invalidateCheckCache();
+          }
         },
         {
           immediate: true,
         }
       );
     });
+    this.$initializing = false;
   },
   /**
    * 初始化|重置解析规则
@@ -137,6 +149,7 @@ export const DouYinLiveMessageFilter = {
       }
       this.$data.rule.push(itemRegExp);
     });
+    this.invalidateCheckCache();
   },
   /**
    * 初始化屏蔽用户uid
@@ -152,6 +165,7 @@ export const DouYinLiveMessageFilter = {
     if ($textarea?.isConnected && document.activeElement !== $textarea) {
       $textarea.value = value;
     }
+    this.invalidateCheckCache();
   },
   /**
    * 编译屏蔽用户uid
@@ -180,6 +194,7 @@ export const DouYinLiveMessageFilter = {
     if (this.$data.$blacklistTextarea?.isConnected) {
       this.$data.$blacklistTextarea.value = value;
     }
+    this.invalidateCheckCache();
   },
   /**
    * 添加一个屏蔽用户uid
@@ -383,20 +398,113 @@ export const DouYinLiveMessageFilter = {
     return clubAnchorId !== "" && clubAnchorId !== "0";
   },
   /**
-   * 通知消息改变(可能是新增)
+   * 是否存在会生效的过滤规则
+   *
+   * 总开关开着但所有子规则都关时直接跳过扫描与解码判定，避免空转
    */
-  change() {
+  hasActiveRule() {
+    const data = this.$data;
+    return (
+      data.block_gift ||
+      data.block_lucky_bag ||
+      data.block_emoji ||
+      data.block_room_message ||
+      data.only_fans_club ||
+      data.min_pay_grade > 0 ||
+      data.blacklist.length > 0 ||
+      data.rule.length > 0
+    );
+  },
+  /**
+   * 清空行级判定缓存
+   *
+   * 规则或黑名单变化后必须清空，否则已保留的可见消息不会按新规则复检
+   *
+   * @param rerun 是否立即对当前可见消息全量复检
+   */
+  invalidateCheckCache(rerun = true) {
+    this.$data.$checkedRows = new WeakMap<Element, number>();
+    if (rerun && this.$inited) {
+      this.change();
+    }
+  },
+  /** 重置聊天列表根节点缓存，下次全量扫描时重新定位 */
+  resetListRoot() {
+    this.$data.$listRoot = null;
+  },
+  /**
+   * 通知消息改变(可能是新增)
+   *
+   * 传入 mutation 时只处理本次新增/变化的行；不传时做全量兜底扫描
+   */
+  change(mutations?: MutationRecord[]) {
+    if (!this.hasActiveRule()) {
+      return;
+    }
+    if (mutations != null) {
+      const $itemList = this.getChangedChatItemList(mutations);
+      // 增量项一律复检：虚拟列表可能复用同一行承载新消息
+      $itemList.forEach(($item) => this.$data.$checkedRows.delete($item));
+      this.execMessageFilterWithNode($itemList);
+      return;
+    }
     this.execMessageFilterWithNode(this.getChatItemList());
+  },
+  /**
+   * 从 mutation 记录中提取新增/变化的聊天行
+   *
+   * 只处理本次变动涉及的节点，避免每次 DOM 变动都全量扫描所有可见行
+   */
+  getChangedChatItemList(mutations: MutationRecord[]) {
+    const $itemSet = new Set<HTMLElement>();
+    const addItem = ($item: HTMLElement | null | undefined) => {
+      if ($item == null || $item.hasAttribute("data-is-filter")) return;
+      $itemSet.add($item);
+    };
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        // 文本节点取父元素，行内内容被原地替换时也能定位到所属行
+        const $el = node.nodeType === 1 ? (node as Element) : node.parentElement;
+        if ($el == null) continue;
+        const $owner = $el.closest<HTMLElement>(".webcast-chatroom___item");
+        if ($owner != null) {
+          addItem($owner);
+          continue;
+        }
+        // 新增的是包裹多行的容器
+        $el.querySelectorAll<HTMLElement>(".webcast-chatroom___item").forEach(addItem);
+      }
+    }
+    return Array.from($itemSet);
   },
   /**
    * 获取尚未判定的发言元素
    *
    * 全文档取而不是只取 `#chatroom` 内：聊天室在全屏、小窗、剧场模式下会整体移出
    * `#chatroom`（甚至挂到 body 下），只按 `#chatroom` 取会整片漏过滤。
-   * `webcast-chatroom___item` 数量有限（虚拟列表只保留可视区几十条），全局查询开销可忽略。
+   * 命中后缓存列表根节点，后续兜底扫描优先在根节点内查询；根节点失联或查不到时回退全局。
    */
   getChatItemList() {
-    return Array.from($$<HTMLElement>(".webcast-chatroom___item:not([data-is-filter])"));
+    const selector = ".webcast-chatroom___item:not([data-is-filter])";
+    const $root = this.$data.$listRoot;
+    if ($root != null && $root.isConnected) {
+      const $itemList = Array.from($root.querySelectorAll<HTMLElement>(selector));
+      if ($itemList.length > 0) {
+        return $itemList;
+      }
+    }
+    const $itemList = Array.from($$<HTMLElement>(selector));
+    if ($itemList.length > 0) {
+      // 取首尾行的最近公共祖先作为列表根节点
+      let $parent = $itemList[0].parentElement;
+      while ($parent != null && !$parent.contains($itemList[$itemList.length - 1])) {
+        $parent = $parent.parentElement;
+      }
+      this.$data.$listRoot = $parent;
+    } else {
+      this.$data.$listRoot = null;
+    }
+    return $itemList;
   },
   /**
    * 获取聊天室条目元素上挂载的消息实例
@@ -433,9 +541,24 @@ export const DouYinLiveMessageFilter = {
   execMessageFilterWithNode(messageQueue: HTMLElement[]) {
     for (let index = 0; index < messageQueue.length; index++) {
       const $danmu = messageQueue[index];
+      if ($danmu.hasAttribute("data-is-filter")) {
+        continue;
+      }
+      const $row = $danmu.closest<HTMLElement>("[data-index]");
+      const dataIndexText = $row?.getAttribute("data-index");
+      const dataIndex = dataIndexText == null ? NaN : Number(dataIndexText);
+      const hasIndex = Number.isInteger(dataIndex);
+      // 全量兜底时跳过未变化的行，避免反复爬 fiber；增量项在 change 中已清掉缓存
+      if (hasIndex && this.$data.$checkedRows.get($danmu) === dataIndex) {
+        continue;
+      }
       const messageIns = this.getMessageInstance($danmu);
       if (messageIns == null) {
         continue;
+      }
+      // 取到实例才记录缓存，取不到留给后续兜底重试
+      if (hasIndex) {
+        this.$data.$checkedRows.set($danmu, dataIndex);
       }
       const flag = this.checkMessageFilter(messageIns);
 
